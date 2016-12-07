@@ -126,7 +126,7 @@ function loadMigrationFiles(directory, log) {
     })
     .then((fileNames) => {
       // Add a special zeroth migration to create the migrations table
-      fileNames.unshift(path.resolve("src/migrations", "0_create-migrations-table.sql"))
+      fileNames.unshift(path.resolve(__dirname, "migrations", "0_create-migrations-table.sql"))
       return fileNames
     })
     .then((fileNames) => bluebird.map(fileNames, loadFile))

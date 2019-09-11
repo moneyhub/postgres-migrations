@@ -84,6 +84,10 @@ function filterMigrations(client) {
   }
 }
 
+const disableHashCheck = (migrationSQL) => migrationSQL
+  .split("\n")[0]
+  .indexOf("-- postgres-migrations disable-hash-check") !== -1
+
 // Remove migrations that have already been applied
 function filterUnappliedMigrations(orderedMigrations) {
   return ({rows: appliedMigrations}) => {
@@ -91,6 +95,9 @@ function filterUnappliedMigrations(orderedMigrations) {
       const migRecord = appliedMigrations[mig.id]
       if (!migRecord) {
         return true
+      }
+      if (disableHashCheck(mig.sql)) {
+        return false
       }
       if (migRecord.hash !== mig.hash) {
         // Someone has altered a migration which has already run - gasp!

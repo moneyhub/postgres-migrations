@@ -36,17 +36,17 @@ function createDb(dbName, dbConfig = {}, config = {}) { // eslint-disable-line c
     pgtoolsConfig,
     dbName
   )
-  .timeout(DEFAULT_TIMEOUT, `Timed out trying to create database: ${dbName}`) // pgtools uses Bluebird
-  .then(() => log(`Created database: ${dbName}`))
-  .catch((err) => {
-    if (err) {
+    .timeout(DEFAULT_TIMEOUT, `Timed out trying to create database: ${dbName}`) // pgtools uses Bluebird
+    .then(() => log(`Created database: ${dbName}`))
+    .catch((err) => {
+      if (err) {
       // we are not worried about duplicate db errors
-      if (err.name !== "duplicate_database") {
-        log(err)
-        throw new Error(`Error creating database. Caused by: '${err.name}: ${err.message}'`)
-      } else {
-        log(`'${dbName}' database already exists`)
+        if (err.name !== "duplicate_database") {
+          log(err)
+          throw new Error(`Error creating database. Caused by: '${err.name}: ${err.message}'`)
+        } else {
+          log(`'${dbName}' database already exists`)
+        }
       }
-    }
-  })
+    })
 }

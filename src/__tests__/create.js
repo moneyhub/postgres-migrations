@@ -30,9 +30,9 @@ test("bad arguments - no database name", (t) => {
     host: "localhost",
     port,
   }))
-  .then((err) => {
-    t.regex(err.message, /database name/)
-  })
+    .then((err) => {
+      t.regex(err.message, /database name/)
+    })
 })
 
 test("bad arguments - empty db config", (t) => {
@@ -49,9 +49,9 @@ test("bad arguments - incorrect user", (t) => {
     host: "localhost",
     port,
   }))
-  .then((err) => {
-    t.regex(err.message, /nobody/)
-  })
+    .then((err) => {
+      t.regex(err.message, /nobody/)
+    })
 })
 
 test("bad arguments - incorrect password", (t) => {
@@ -61,9 +61,9 @@ test("bad arguments - incorrect password", (t) => {
     host: "localhost",
     port,
   }))
-  .then((err) => {
-    t.regex(err.message, /password/)
-  })
+    .then((err) => {
+      t.regex(err.message, /password/)
+    })
 })
 
 test("bad arguments - incorrect host", (t) => {
@@ -73,9 +73,9 @@ test("bad arguments - incorrect host", (t) => {
     host: "sillyhost",
     port,
   }))
-  .then((err) => {
-    t.regex(err.message, /sillyhost/)
-  })
+    .then((err) => {
+      t.regex(err.message, /sillyhost/)
+    })
 })
 
 test("bad arguments - incorrect port", (t) => {
@@ -85,9 +85,9 @@ test("bad arguments - incorrect port", (t) => {
     host: "localhost",
     port: 1234,
   }))
-  .then((err) => {
-    t.regex(err.message, /1234/)
-  })
+    .then((err) => {
+      t.regex(err.message, /1234/)
+    })
 })
 
 test("already created", () => {

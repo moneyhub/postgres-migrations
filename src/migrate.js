@@ -25,6 +25,7 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
   }
 
   const log = config.logger || (() => {})
+  const numberMigrationsToLoad = config.numberMigrationsToLoad
 
   const client = bluebird.promisifyAll(new pg.Client(dbConfig))
 
@@ -33,7 +34,7 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
   return bluebird.resolve()
     .then(() => client.connectAsync())
     .then(() => log("Connected to database"))
-    .then(() => loadMigrationFiles(migrationsDirectory, log))
+    .then(() => loadMigrationFiles(migrationsDirectory, log, numberMigrationsToLoad))
     .then(filterMigrations(client))
     .each(runMigration(client))
     .then(finalise(client, log))
@@ -111,10 +112,17 @@ function filterUnappliedMigrations(orderedMigrations) {
 }
 
 const readDir = bluebird.promisify(fs.readdir)
-function loadMigrationFiles(directory, log) {
+function loadMigrationFiles(directory, log, numberMigrationsToLoad) {
   log(`Loading migrations from: ${directory}`)
   return readDir(directory)
     .then((fileNames) => {
+      if (numberMigrationsToLoad) {
+        log(`Loading ${numberMigrationsToLoad} migration files`)
+        return fileNames.slice(0, numberMigrationsToLoad)
+      }
+      return fileNames
+    })
+    .then(fileNames => {
       log(`Found migration files: ${fileNames}`)
       return fileNames
         .filter((fileName) => fileName.toLowerCase().endsWith(".sql"))

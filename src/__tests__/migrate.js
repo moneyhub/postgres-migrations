@@ -55,6 +55,32 @@ test("successful second migration", (t) => {
     })
 })
 
+test("number of migrations to load", (t) => {
+  const databaseName = "migration-test-number-migrations-load"
+  const dbConfig = {
+    database: databaseName,
+    user: "postgres",
+    password: PASSWORD,
+    host: "localhost",
+    port,
+  }
+
+  return createDb(databaseName, dbConfig)
+    .then(() => migrate(dbConfig, "src/__tests__/migrations-to-load", {numberMigrationsToLoad: 2}))
+    .then(() => doesTableExist(dbConfig, "load_first"))
+    .then((exists) => {
+      t.truthy(exists)
+    })
+    .then(() => doesTableExist(dbConfig, "load_second"))
+    .then((exists) => {
+      t.truthy(exists)
+    })
+    .then(() => doesTableExist(dbConfig, "load_third"))
+    .then((exists) => {
+      t.falsy(exists)
+    })
+})
+
 test("bad arguments - no db config", (t) => {
   return t.throws(migrate())
     .then((err) => {

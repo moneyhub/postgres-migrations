@@ -27,24 +27,25 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
   const log = config.logger || (() => {})
   const numberMigrationsToLoad = config.numberMigrationsToLoad
 
-  const client = bluebird.promisifyAll(new pg.Client(dbConfig))
+  const client = new pg.Client(dbConfig)
 
   log("Attempting database migration")
 
   return bluebird.resolve()
-    .then(() => client.connectAsync())
+    .then(() => client.connect())
     .then(() => log("Connected to database"))
     .then(() => loadMigrationFiles(migrationsDirectory, log, numberMigrationsToLoad))
     .then(filterMigrations(client))
     .each(runMigration(client))
-    .then(finalise(client, log))
+    .then(logResult(log))
     .catch((err) => {
       log(`Migration failed. Reason: ${err.message}`)
       throw err
     })
+    .finally(() => client.end())
 }
 
-function finalise(client, log) {
+function logResult(log) {
   return (completedMigrations) => {
     if (completedMigrations.length === 0) {
       log("No migrations applied")
@@ -53,8 +54,7 @@ function finalise(client, log) {
       log(`Successfully applied migrations: ${names}`)
     }
 
-    return client.endAsync()
-      .then(() => completedMigrations)
+    return completedMigrations
   }
 }
 
@@ -79,7 +79,7 @@ function filterMigrations(client) {
           return orderedMigrations
         }
 
-        return client.queryAsync("SELECT * FROM migrations")
+        return client.query("SELECT * FROM migrations")
           .then(filterUnappliedMigrations(orderedMigrations))
       })
   }
@@ -164,7 +164,7 @@ function loadFile(filePath) {
 
 // Check whether table exists in postgres - http://stackoverflow.com/a/24089729
 function doesTableExist(client, tableName) {
-  return client.queryAsync(SQL`
+  return client.query(SQL`
       SELECT EXISTS (
         SELECT 1
         FROM   pg_catalog.pg_class c

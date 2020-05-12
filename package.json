@@ -27,25 +27,28 @@
   },
   "scripts": {
     "lint": "eslint src",
-    "test-integration": "ava --verbose",
-    "test-unit": "ava src/**/__unit__/**/*.js",
+    "test-integration": "ava --verbose --timeout=2m --config ava.config.integration.js",
+    "test-unit": "ava",
     "test": "npm run test-unit && npm run lint && npm run test-integration",
-    "preversion": "npm test",
-    "prepush": "npm test"
+    "pre-version": "npm test"
+  },
+  "husky": {
+    "hooks": {
+      "pre-push": "npm test"
+    }
   },
   "dependencies": {
-    "bluebird": "^3.4.6",
+    "bluebird": "^3.7.2",
     "dedent-js": "^1.0.1",
-    "pg": "^6.1.0",
-    "pgtools": "^0.2.2",
+    "pg": "^8.1.0",
     "sql-template-strings": "^2.2.2"
   },
   "devDependencies": {
     "@mft/eslint-config-momentumft": "^4.0.0",
-    "ava": "^0.17.0",
-    "eslint": "^6.3.0",
-    "husky": "^0.11.9",
-    "sinon": "^1.17.0",
-    "sinon-bluebird": "^3.1.0"
+    "ava": "^3.8.2",
+    "eslint": "^7.0.0",
+    "husky": "^4.2.5",
+    "sinon": "^9.0.2",
+    "sinon-bluebird": "^3.1.1"
   }
 }

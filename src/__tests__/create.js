@@ -10,21 +10,22 @@ const PASSWORD = startPostgres.PASSWORD
 
 let port
 
-test.cb.before((t) => {
+test.before.cb((t) => {
   port = startPostgres(CONTAINER_NAME, t)
 })
 
-test("successful creation", () => {
+test("successful creation", (t) => {
   return createDb("create-test-success", {
     user: "postgres",
     password: PASSWORD,
     host: "localhost",
     port,
   })
+    .then(() => t.pass())
 })
 
 test("bad arguments - no database name", (t) => {
-  return t.throws(createDb({
+  return t.throwsAsync(() => createDb({
     user: "postgres",
     password: PASSWORD,
     host: "localhost",
@@ -36,14 +37,14 @@ test("bad arguments - no database name", (t) => {
 })
 
 test("bad arguments - empty db config", (t) => {
-  return t.throws(createDb("create-test-no-config", {}))
+  return t.throwsAsync(() => createDb("create-test-no-config", {}))
     .then((err) => {
       t.regex(err.message, /config/)
     })
 })
 
 test("bad arguments - incorrect user", (t) => {
-  return t.throws(createDb("create-test-user", {
+  return t.throwsAsync(() => createDb("create-test-user", {
     user: "nobody",
     password: PASSWORD,
     host: "localhost",
@@ -55,7 +56,7 @@ test("bad arguments - incorrect user", (t) => {
 })
 
 test("bad arguments - incorrect password", (t) => {
-  return t.throws(createDb("create-test-password", {
+  return t.throwsAsync(() => createDb("create-test-password", {
     user: "postgres",
     password: "not_the_password",
     host: "localhost",
@@ -67,7 +68,7 @@ test("bad arguments - incorrect password", (t) => {
 })
 
 test("bad arguments - incorrect host", (t) => {
-  return t.throws(createDb("create-test-host", {
+  return t.throwsAsync(() => createDb("create-test-host", {
     user: "postgres",
     password: PASSWORD,
     host: "sillyhost",
@@ -79,7 +80,7 @@ test("bad arguments - incorrect host", (t) => {
 })
 
 test("bad arguments - incorrect port", (t) => {
-  return t.throws(createDb("create-test-port", {
+  return t.throwsAsync(() => createDb("create-test-port", {
     user: "postgres",
     password: PASSWORD,
     host: "localhost",
@@ -90,7 +91,7 @@ test("bad arguments - incorrect port", (t) => {
     })
 })
 
-test("already created", () => {
+test("already created", (t) => {
   const create = () => createDb("create-test-duplicate", {
     user: "postgres",
     password: PASSWORD,
@@ -100,9 +101,10 @@ test("already created", () => {
 
   return create()
     .then(create)
+    .then(() => t.pass())
 })
 
-test("database name included in config", () => {
+test("database name included in config", (t) => {
   const create = () => createDb("create-test-db-name", {
     database: "somethingsilly",
     user: "postgres",
@@ -113,9 +115,10 @@ test("database name included in config", () => {
 
   return create()
     .then(create)
+    .then(() => t.pass())
 })
 
-test("custom default database name", () => {
+test("custom default database name", (t) => {
   const create = () => createDb("create-test-default-db", {
     defaultDatabase: "postgres",
     user: "postgres",
@@ -126,6 +129,7 @@ test("custom default database name", () => {
 
   return create()
     .then(create)
+    .then(() => t.pass())
 })
 
 test.after.always(() => {

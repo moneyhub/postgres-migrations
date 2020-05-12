@@ -2,35 +2,33 @@ const bluebird = require("bluebird")
 const SQL = require("sql-template-strings")
 const dedent = require("dedent-js")
 
-const noop = () => {}
-
 module.exports = client => migration => {
   const inTransaction = migration.sql
     .split("\n")[0]
     .indexOf("-- postgres-migrations disable-transaction") === -1
 
-  const begin = inTransaction
-    ? client.queryAsync.bind(client, "START TRANSACTION")
-    : noop
+  const begin = () => inTransaction
+    ? client.query("START TRANSACTION")
+    : undefined
 
-  const end = inTransaction
-    ? client.queryAsync.bind(client, "COMMIT")
-    : noop
+  const end = () => inTransaction
+    ? client.query("COMMIT")
+    : undefined
 
-  const cleanup = inTransaction
-    ? client.queryAsync.bind(client, "ROLLBACK")
-    : noop
+  const cleanup = () => inTransaction
+    ? client.query("ROLLBACK")
+    : undefined
 
   return bluebird
     .resolve()
     .then(begin)
-    .then(() => client.queryAsync(migration.sql))
+    .then(() => client.query(migration.sql))
     .then(() => {
-      return client.queryAsync(
+      return client.query(
         SQL`
         INSERT INTO migrations (id, name, hash)
           VALUES (${migration.id}, ${migration.name}, ${migration.hash})
-      `
+      `,
       )
     })
     .then(end)
@@ -38,9 +36,9 @@ module.exports = client => migration => {
       return bluebird.resolve().tap(cleanup).then(() => {
         throw new Error(
           dedent`
-            An error occurred running '${migration.name}'. Rolled back this migration.
-            No further migrations were run.
-            Reason: ${err.message}`
+          An error occurred running '${migration.name}'. Rolled back this migration.
+          No further migrations were run.
+          Reason: ${err.message}`,
         )
       })
     })

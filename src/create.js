@@ -1,6 +1,9 @@
-const pgtools = require("pgtools")
+const bluebird = require("bluebird")
+const pg = require("pg")
 
 module.exports = createDb
+
+const DUPLICATE_DATABASE = "42P04"
 
 // Time out after 10 seconds - should probably be able to override this
 const DEFAULT_TIMEOUT = 10000
@@ -23,30 +26,31 @@ function createDb(dbName, dbConfig = {}, config = {}) { // eslint-disable-line c
 
   log(`Attempting to create database: ${dbName}`)
 
-  // pgtools mutates its inputs (tut tut) so create our own object here
-  const pgtoolsConfig = {
+  const client = new pg.Client({
     database: dbConfig.defaultDatabase || "postgres",
     user,
     password,
     host,
     port,
-  }
+  })
 
-  return pgtools.createdb(
-    pgtoolsConfig,
-    dbName
-  )
-    .timeout(DEFAULT_TIMEOUT, `Timed out trying to create database: ${dbName}`) // pgtools uses Bluebird
+  return bluebird.resolve()
+    .then(() => client.connect())
+    .timeout(DEFAULT_TIMEOUT)
+    // eslint-disable-next-line quotes
+    .then(() => client.query(`CREATE DATABASE "${dbName.replace(/\"/g, '""')}"`))
+    .timeout(DEFAULT_TIMEOUT)
     .then(() => log(`Created database: ${dbName}`))
     .catch((err) => {
       if (err) {
-      // we are not worried about duplicate db errors
-        if (err.name !== "duplicate_database") {
+        // we are not worried about duplicate db errors
+        if (err.code === DUPLICATE_DATABASE) {
+          log(`'${dbName}' database already exists`)
+        } else {
           log(err)
           throw new Error(`Error creating database. Caused by: '${err.name}: ${err.message}'`)
-        } else {
-          log(`'${dbName}' database already exists`)
         }
       }
     })
+    .finally(() => client.end())
 }

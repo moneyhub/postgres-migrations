@@ -14,7 +14,7 @@ const PASSWORD = startPostgres.PASSWORD
 
 let port
 
-test.cb.before((t) => {
+test.before.cb((t) => {
   port = startPostgres(CONTAINER_NAME, t)
 })
 
@@ -82,14 +82,14 @@ test("number of migrations to load", (t) => {
 })
 
 test("bad arguments - no db config", (t) => {
-  return t.throws(migrate())
+  return t.throwsAsync(() => migrate())
     .then((err) => {
       t.regex(err.message, /config/)
     })
 })
 
 test("bad arguments - no migrations directory argument", (t) => {
-  return t.throws(migrate({
+  return t.throwsAsync(() => migrate({
     database: "migration-test-args",
     user: "postgres",
     password: PASSWORD,
@@ -102,7 +102,7 @@ test("bad arguments - no migrations directory argument", (t) => {
 })
 
 test("bad arguments - incorrect user", (t) => {
-  return t.throws(migrate({
+  return t.throwsAsync(() => migrate({
     database: "migration-test-args",
     user: "nobody",
     password: PASSWORD,
@@ -115,7 +115,7 @@ test("bad arguments - incorrect user", (t) => {
 })
 
 test("bad arguments - incorrect password", (t) => {
-  return t.throws(migrate({
+  return t.throwsAsync(() => migrate({
     database: "migration-test-args",
     user: "postgres",
     password: "not_the_password",
@@ -128,7 +128,7 @@ test("bad arguments - incorrect password", (t) => {
 })
 
 test("bad arguments - incorrect host", (t) => {
-  return t.throws(migrate({
+  return t.throwsAsync(() => migrate({
     database: "migration-test-args",
     user: "postgres",
     password: PASSWORD,
@@ -141,7 +141,7 @@ test("bad arguments - incorrect host", (t) => {
 })
 
 test("bad arguments - incorrect port", (t) => {
-  return t.throws(migrate({
+  return t.throwsAsync(() => migrate({
     database: "migration-test-args",
     user: "postgres",
     password: PASSWORD,
@@ -154,7 +154,7 @@ test("bad arguments - incorrect port", (t) => {
 })
 
 test("no database", (t) => {
-  return t.throws(migrate({
+  return t.throwsAsync(() => migrate({
     database: "migration-test-no-database",
     user: "postgres",
     password: PASSWORD,
@@ -181,13 +181,13 @@ test("no migrations dir", (t) => {
       return migrate(dbConfig, "some/path")
     })
 
-  return t.throws(promise)
+  return t.throwsAsync(() => promise)
     .then((err) => {
       t.regex(err.message, /some\/path/)
     })
 })
 
-test("empty migrations dir", () => {
+test("empty migrations dir", (t) => {
   const databaseName = "migration-test-empty-dir"
   const dbConfig = {
     database: databaseName,
@@ -201,6 +201,7 @@ test("empty migrations dir", () => {
     .then(() => {
       return migrate(dbConfig, "src/__tests__/empty")
     })
+    .then(() => t.pass())
 })
 
 test("non-consecutive ordering", (t) => {
@@ -218,7 +219,7 @@ test("non-consecutive ordering", (t) => {
       return migrate(dbConfig, "src/__tests__/non-consecutive")
     })
 
-  return t.throws(promise)
+  return t.throwsAsync(() => promise)
     .then((err) => {
       t.regex(err.message, /Found a non-consecutive migration ID/)
     })
@@ -239,7 +240,7 @@ test("not starting from one", (t) => {
       return migrate(dbConfig, "src/__tests__/start-from-2")
     })
 
-  return t.throws(promise)
+  return t.throwsAsync(() => promise)
     .then((err) => {
       t.regex(err.message, /Found a non-consecutive migration ID/)
     })
@@ -260,7 +261,7 @@ test("negative ID", (t) => {
       return migrate(dbConfig, "src/__tests__/negative")
     })
 
-  return t.throws(promise)
+  return t.throwsAsync(() => promise)
     .then((err) => {
       t.regex(err.message, /Found a non-consecutive migration ID/)
     })
@@ -281,7 +282,7 @@ test("no prefix", (t) => {
       return migrate(dbConfig, "src/__tests__/no-prefix")
     })
 
-  return t.throws(promise)
+  return t.throwsAsync(() => promise)
     .then((err) => {
       t.regex(err.message, /Migration files should begin with an integer ID/)
       t.regex(err.message, /migrate-this/, "Should name the problem file")
@@ -303,7 +304,7 @@ test("syntax error", (t) => {
       return migrate(dbConfig, "src/__tests__/syntax-error")
     })
 
-  return t.throws(promise)
+  return t.throwsAsync(() => promise)
     .then((err) => {
       t.regex(err.message, /syntax error/)
     })
@@ -323,7 +324,7 @@ test("hash check failure", (t) => {
     .then(() => migrate(dbConfig, "src/__tests__/hash-check/first-run"))
     .then(() => migrate(dbConfig, "src/__tests__/hash-check/second-run"))
 
-  return t.throws(promise)
+  return t.throwsAsync(() => promise)
     .then((err) => {
       t.regex(err.message, /Hashes don't match/)
       t.regex(err.message, /1_migration/, "Should name the problem file")
@@ -361,7 +362,7 @@ test("rollback", (t) => {
   const promise = createDb(databaseName, dbConfig)
     .then(() => migrate(dbConfig, "src/__tests__/rollback"))
 
-  return t.throws(promise)
+  return t.throwsAsync(() => promise)
     .then((err) => {
       t.regex(err.message, /Rolled back/)
       t.regex(err.message, /1_trigger-rollback/)
@@ -378,15 +379,15 @@ test.after.always(() => {
 
 function doesTableExist(dbConfig, tableName) {
   const client = bluebird.promisifyAll(new pg.Client(dbConfig))
-  return client.connectAsync()
-    .then(() => client.queryAsync(SQL`
+  return client.connect()
+    .then(() => client.query(SQL`
         SELECT EXISTS (
           SELECT 1
           FROM   pg_catalog.pg_class c
           WHERE  c.relname = ${tableName}
           AND    c.relkind = 'r'
         );
-      `)
+      `),
     )
     .then((result) => {
       client.end()

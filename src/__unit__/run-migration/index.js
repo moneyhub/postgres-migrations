@@ -1,6 +1,5 @@
 const test = require("ava")
 const sinon = require("sinon")
-require("sinon-bluebird")
 
 const bluebird = require("bluebird")
 
@@ -33,74 +32,74 @@ function buildMigration(sql) {
 }
 
 test("runs a simple migration", t => {
-  const queryAsync = sinon.stub().resolves()
-  const run = runMigration({queryAsync})
+  const query = sinon.stub().resolves()
+  const run = runMigration({query})
 
   const migration = buildMigration(normalSqlFile)
 
   return run(migration).then(() => {
-    t.is(queryAsync.callCount, 4)
+    t.is(query.callCount, 4)
     t.is(
-      queryAsync.firstCall.args[0],
+      query.firstCall.args[0],
       "START TRANSACTION",
-      "should begin a transaction"
+      "should begin a transaction",
     )
 
     t.is(
-      queryAsync.secondCall.args[0],
+      query.secondCall.args[0],
       migration.sql,
-      "should execute the migration"
+      "should execute the migration",
     )
 
     t.deepEqual(
-      queryAsync.thirdCall.args[0].values,
+      query.thirdCall.args[0].values,
       [migration.id, migration.name, migration.hash],
-      "should record the running of the migration in the database"
+      "should record the running of the migration in the database",
     )
 
     t.is(
-      queryAsync.lastCall.args[0],
+      query.lastCall.args[0],
       "COMMIT",
-      "should complete the transaction"
+      "should complete the transaction",
     )
   })
 })
 
 test("rolls back when there is an error inside a transactiony migration", t => {
-  const queryAsync = sinon.stub().rejects(new Error("There was a problem"))
-  const run = runMigration({queryAsync})
+  const query = sinon.stub().rejects(new Error("There was a problem"))
+  const run = runMigration({query})
 
   const migration = buildMigration(normalSqlFile)
   t.plan(2)
 
   return run(migration).catch(e => {
-    t.is(queryAsync.lastCall.args[0], "ROLLBACK", "should perform a rollback")
+    t.is(query.lastCall.args[0], "ROLLBACK", "should perform a rollback")
     t.true(
       e.message.indexOf("There was a problem") >= 0,
-      "should throw an error"
+      "should throw an error",
     )
   })
 })
 
 test("does not run the migration in a transaction when instructed", t => {
-  const queryAsync = sinon.stub().resolves()
-  const run = runMigration({queryAsync})
+  const query = sinon.stub().resolves()
+  const run = runMigration({query})
 
   const migration = buildMigration(noTransactionSqlFile)
 
   return run(migration).then(() => {
-    t.is(queryAsync.callCount, 2)
+    t.is(query.callCount, 2)
 
     t.is(
-      queryAsync.firstCall.args[0],
+      query.firstCall.args[0],
       migration.sql,
-      "should run the migration"
+      "should run the migration",
     )
 
     t.deepEqual(
-      queryAsync.secondCall.args[0].values,
+      query.secondCall.args[0].values,
       [migration.id, migration.name, migration.hash],
-      "should record the running of the migration in the database"
+      "should record the running of the migration in the database",
     )
   })
 })
@@ -108,17 +107,17 @@ test("does not run the migration in a transaction when instructed", t => {
 test(
   "does not roll back when there is an error inside a transactiony migration",
   t => {
-    const queryAsync = sinon.stub().rejects(new Error("There was a problem"))
-    const run = runMigration({queryAsync})
+    const query = sinon.stub().rejects(new Error("There was a problem"))
+    const run = runMigration({query})
 
     const migration = buildMigration(noTransactionSqlFile)
 
     return run(migration).catch(e => {
-      sinon.assert.neverCalledWith(queryAsync, "ROLLBACK")
+      sinon.assert.neverCalledWith(query, "ROLLBACK")
       t.true(
         e.message.indexOf("There was a problem") >= 0,
-        "should throw an error"
+        "should throw an error",
       )
     })
-  }
+  },
 )

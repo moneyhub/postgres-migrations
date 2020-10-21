@@ -79,7 +79,7 @@ function filterMigrations(client) {
           return orderedMigrations
         }
 
-        return client.query("SELECT * FROM migrations")
+        return client.query("SELECT * FROM migrations ORDER BY id ASC")
           .then(filterUnappliedMigrations(orderedMigrations))
       })
   }

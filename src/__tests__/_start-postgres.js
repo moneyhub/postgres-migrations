@@ -13,9 +13,9 @@ module.exports = (containerName, t) => {
     "--filter", "event=health_status",
   ])
   events.stdout.on("data", (data) => {
-    data = data.toString()
+    const eventData = data.toString()
 
-    if (data.includes("health_status: healthy")) {
+    if (eventData.includes("health_status: healthy")) {
       events.kill()
 
       t.end()
@@ -29,7 +29,7 @@ module.exports = (containerName, t) => {
     --health-interval=1s \
     --health-retries=30 \
     --health-timeout=1s \
-    postgres:9.4`)
+    postgres:9.6`)
 
   const portMapping = execSync(`docker port ${containerName} 5432`).toString()
   const port = parseInt(portMapping.split(":")[1], 10)

@@ -23,32 +23,28 @@
     "url": "https://github.com/momentumft/postgres-migrations/issues"
   },
   "engines": {
-    "node": "^6.0.0"
+    "node": "^12.0.0"
   },
   "scripts": {
     "lint": "eslint src",
     "test-integration": "ava --verbose --timeout=2m --config ava.config.integration.js",
     "test-unit": "ava",
     "test": "npm run test-unit && npm run lint && npm run test-integration",
-    "pre-version": "npm test"
-  },
-  "husky": {
-    "hooks": {
-      "pre-push": "npm test"
-    }
+    "pre-version": "npm test",
+    "prepare": "husky install"
   },
   "dependencies": {
     "bluebird": "^3.7.2",
     "dedent-js": "^1.0.1",
-    "pg": "^8.1.0",
     "sql-template-strings": "^2.2.2"
   },
   "devDependencies": {
-    "@mft/eslint-config-momentumft": "^4.0.0",
-    "ava": "^3.8.2",
-    "eslint": "^7.0.0",
-    "husky": "^4.2.5",
-    "sinon": "^9.0.2",
+    "@mft/eslint-config-momentumft": "^5.0.0",
+    "ava": "^3.15.0",
+    "eslint": "^7.28.0",
+    "husky": "^6.0.0",
+    "pg": "^8.6.0",
+    "sinon": "^11.1.1",
     "sinon-bluebird": "^3.1.1"
   }
 }

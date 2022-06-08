@@ -23,7 +23,7 @@
     "url": "https://github.com/momentumft/postgres-migrations/issues"
   },
   "engines": {
-    "node": "^12.0.0"
+    "node": ">= 12.0.0"
   },
   "scripts": {
     "lint": "eslint src",

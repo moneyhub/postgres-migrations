@@ -349,6 +349,24 @@ test("hash check disabled", (t) => {
     })
 })
 
+test("hash check disabled and transaction disabled", (t) => {
+  const databaseName = "migration-test-hash-disabled-check-transaction-disabled"
+  const dbConfig = {
+    database: databaseName,
+    user: "postgres",
+    password: PASSWORD,
+    host: "localhost",
+    port,
+  }
+
+  return createDb(databaseName, dbConfig)
+    .then(() => migrate(dbConfig, "src/__tests__/hash-check-disable/first-run"))
+    .then(() => migrate(dbConfig, "src/__tests__/hash-check-disable/second-run"))
+    .then((exists) => {
+      t.truthy(exists)
+    })
+})
+
 test("rollback", (t) => {
   const databaseName = "migration-test-rollback"
   const dbConfig = {

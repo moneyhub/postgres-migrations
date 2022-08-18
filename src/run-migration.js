@@ -4,7 +4,6 @@ const dedent = require("dedent-js")
 
 module.exports = client => migration => {
   const inTransaction = migration.sql
-    .split("\n")[0]
     .indexOf("-- postgres-migrations disable-transaction") === -1
 
   const begin = () => inTransaction

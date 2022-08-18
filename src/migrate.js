@@ -86,7 +86,6 @@ function filterMigrations(client) {
 }
 
 const disableHashCheck = (migrationSQL) => migrationSQL
-  .split("\n")[0]
   .indexOf("-- postgres-migrations disable-hash-check") !== -1
 
 // Remove migrations that have already been applied

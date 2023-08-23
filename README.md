@@ -35,13 +35,13 @@ createDb("database-name", {
 
 ## Design decisions
 
-**No down migrations**
+### No down migrations
 
 There is deliberately no concept of a 'down' migration. In the words of Nick Craver:
 
 > If we needed to reverse something, we could just push another migration negating whatever we did that went boom ... Why roll back when you can roll forward?
 
-**Simple ordering**
+### Simple ordering
 
 Migrations are guaranteed to run in the same order every time, on every system.
 
@@ -51,11 +51,11 @@ For example, imagine Developer A creates a migration file in a branch. The next 
 
 The production database sees the migrations applied out of order with respect to their creation time. Any new development database will run the migrations in a different order.
 
-**The `migrations` table**
+### The migrations table
 
 A `migrations` table is created as the first migration, before any user-supplied migrations. This keeps track of all the migrations which have already been run.
 
-**Hash checks for previous migrations**
+### Hash checks for previous migrations
 
 Previously run migration scripts shouldn't be modified, since we want the process to be repeated in the same way for every new environment.
 
@@ -63,19 +63,19 @@ This is enforced by hashing the file contents of a migration script and storing 
 
 An exception is made when `-- postgres-migrations disable-hash-check` is included at the top of the migration file. This allows to make amendments to the migration but it should only be used as a last resource if the migration has already been deployed.
 
-**Each migration run in a transaction**
+### Each migration run in a transaction
 
 Ensures each migration is atomic. Either it completes successfully, or it is rolled back and the process is aborted.
 
 An exception is made when `-- postgres-migrations disable-transaction` is included at the top of the migration file. This allows migrations such as `CREATE INDEX CONCURRENTLY` which cannot be run inside a transaction.
 
-**Abort on errors**
+### Abort on errors
 
 If anything fails, the process is aborted by throwing an exception.
 
 ## Migration rules
 
-**Prefix all file names with a consecutive integer ID**
+### Prefix all file names with a consecutive integer ID
 
 Migrations will be performed in this order.
 
@@ -101,11 +101,11 @@ migrations
 
 Note that file names cannot be changed later.
 
-**Make migrations idempotent**
+### Make migrations idempotent
 
 Migrations should only be run once, but this is a good principle to follow regardless.
 
-**Migrations are immutable**
+### Migrations are immutable
 
 Once applied (to production), a migration cannot be changed.
 
@@ -113,7 +113,7 @@ This is enforced by storing a hash of the file contents for each migration in th
 
 These hashes are checked when running migrations.
 
-**Migrations should be backwards compatible**
+### Migrations should be backwards compatible
 
 Backwards incompatible changes can usually be made in a few stages.
 

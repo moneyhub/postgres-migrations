@@ -61,6 +61,8 @@ Previously run migration scripts shouldn't be modified, since we want the proces
 
 This is enforced by hashing the file contents of a migration script and storing this in `migrations` table. Before running a migration, the previously run scripts are hashed and checked against the database to ensure they haven't changed.
 
+An exception is made when `-- postgres-migrations disable-hash-check` is included at the top of the migration file. This allows to make amendments to the migration but it should only be used as a last resource if the migration has already been deployed.
+
 **Each migration run in a transaction**
 
 Ensures each migration is atomic. Either it completes successfully, or it is rolled back and the process is aborted.

@@ -3,6 +3,7 @@
   "version": "2.1.0",
   "description": "Stack Overflow style database migrations for PostgreSQL",
   "main": "src/index.js",
+  "types": "src/index.d.ts",
   "author": "Momentum Financial Technology Ltd",
   "keywords": [
     "postgres",
@@ -39,11 +40,12 @@
     "sql-template-strings": "^2.2.2"
   },
   "devDependencies": {
-    "@mft/eslint-config-momentumft": "^5.0.0",
+    "@mft/eslint-config-momentumft": "^10.0.0",
     "ava": "^3.15.0",
-    "eslint": "^7.28.0",
-    "husky": "^6.0.0",
-    "pg": "^8.6.0",
-    "sinon": "^11.1.1"
+    "eslint": "^8.50.0",
+    "eslint-plugin-ava": "^14.0.0",
+    "husky": "^8.0.3",
+    "pg": "^8.11.3",
+    "sinon": "^16.0.0"
   }
 }

@@ -1,26 +1,23 @@
-/* eslint-disable */
+interface DbConfig {
+  defaultDatabase?: string
+  user: string
+  password: string
+  host: string
+  port: number
+}
 
-export type ConnectionConfig = {
+interface DbConfigWithName {
   database: string
   user: string
   password: string
   host: string
-  port: string
-  defaultDatabase?: string
+  port: number
 }
 
-export type CreateConfig  = {
-  logger(message: string): void
+interface Config {
+  logger: (message: string) => void
 }
 
-export type MigrateConfig = {
-  logger(message: string): void
-  numberMigrationsToLoad: number
-}
+export function createDb(dbName: string, dbConfig: DbConfig, config: Config): Promise<void>
 
-interface PostgresMigrations {
-  createDb(dbName: string, dbConfig: ConnectionConfig, config: CreateConfig): Promise<void>
-  migrate(dbConfig: ConnectionConfig, migrationsDirectory: string, config: MigrateConfig): Promise<void>
-}
-
-export default PostgresMigrations
+export function migrate(dbConfig: DbConfigWithName, migrationsDirectory: string, config: Config): Promise<void>

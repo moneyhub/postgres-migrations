@@ -18,7 +18,9 @@ export type MigrateConfig = {
   numberMigrationsToLoad: number
 }
 
-export default interface PostgresMigrations {
+interface PostgresMigrations {
   createDb(dbName: string, dbConfig: ConnectionConfig, config: CreateConfig): Promise<void>
-  migrate(dbConfig: ConnectionConfig, migrationsDirectory: string, config: MigrateConfig): Promoise<void>
+  migrate(dbConfig: ConnectionConfig, migrationsDirectory: string, config: MigrateConfig): Promise<void>
 }
+
+export default PostgresMigrations

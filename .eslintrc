@@ -1,2 +1,20 @@
----
-  extends: "@mft/eslint-config-momentumft"
+{
+  "extends": [
+    "@mft/eslint-config-momentumft",
+    "eslint:recommended",
+    "plugin:ava/recommended"
+  ],
+  "plugins": [
+    "ava"
+  ],
+  "rules": {
+    "mocha/handle-done-callback": "off",
+    "mocha/no-return-and-callback": "off",
+    "mocha/no-global-tests": "off",
+    "ava/prefer-async-await": "off",
+    "ava/no-ignored-test-files": "off",
+    "promise/always-return": "off",
+    "ava/no-unknown-modifiers": "off",
+    "ava/hooks-order": "off"
+  }
+}

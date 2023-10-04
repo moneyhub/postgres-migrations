@@ -38,7 +38,7 @@ function createDb(dbName, dbConfig = {}, config = {}) { // eslint-disable-line c
     .then(() => client.connect())
     .timeout(DEFAULT_TIMEOUT)
     // eslint-disable-next-line quotes
-    .then(() => client.query(`CREATE DATABASE "${dbName.replace(/\"/g, '""')}"`))
+    .then(() => client.query(`CREATE DATABASE "${dbName.replace(/"/g, '""')}"`))
     .timeout(DEFAULT_TIMEOUT)
     .then(() => log(`Created database: ${dbName}`))
     .catch((err) => {

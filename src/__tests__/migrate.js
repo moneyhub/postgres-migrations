@@ -391,6 +391,27 @@ test("rollback", (t) => {
     })
 })
 
+test("timeout failure", t => {
+  const databaseName = "migration-test-timeout"
+  const dbConfig = {
+    database: databaseName,
+    user: "postgres",
+    password: PASSWORD,
+    host: "localhost",
+    port,
+  }
+
+  const promise = createDb(databaseName, dbConfig)
+    .then(() => migrate(dbConfig, "src/__tests__/timeout", {
+      migrationTimeout: 500,
+    }))
+
+  return t.throwsAsync(() => promise)
+    .then((err) => {
+      t.regex(err.message, /canceling statement due to user request/)
+    })
+})
+
 test.after.always(() => {
   execSync(`docker rm -f ${CONTAINER_NAME}`)
 })

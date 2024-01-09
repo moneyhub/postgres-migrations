@@ -10,6 +10,11 @@ const runMigration = require("./run-migration")
 
 module.exports = migrate
 
+const getPid = async (client) => {
+  const res = await client.query("SELECT pg_backend_pid()")
+  return res.rows[0].pg_backend_pid
+}
+
 function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-disable-line complexity
   if (
     typeof dbConfig.database !== "string" ||
@@ -25,24 +30,48 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
   }
 
   const log = config.logger || (() => {})
+  const {migrationTimeout = 60000} = config
   const numberMigrationsToLoad = config.numberMigrationsToLoad
 
   const client = new pg.Client(dbConfig)
-
+  let pid, queryCancelled = false, timeoutId
   log("Attempting database migration")
 
   return bluebird.resolve()
     .then(() => client.connect())
     .then(() => log("Connected to database"))
+    .then(() => getPid(client))
+    .then(res => {
+      log(`Retrieved backend PID: ${res}`)
+      pid = res
+    })
     .then(() => loadMigrationFiles(migrationsDirectory, log, numberMigrationsToLoad))
     .then(filterMigrations(client))
+    .then((migrations) => {
+      timeoutId = setTimeout(async () => {
+        queryCancelled = true
+        const cancelClient = new pg.Client(dbConfig)
+        await cancelClient.connect()
+        await cancelClient.query(`SELECT pg_cancel_backend(${pid})`)
+
+        log("Cancelling migration connection")
+
+        cancelClient.end()
+      }, migrationTimeout)
+
+      return migrations
+    })
     .each(runMigration(client))
     .then(logResult(log))
     .catch((err) => {
-      log(`Migration failed. Reason: ${err.message}`)
+      const message = queryCancelled ? "Timeout" : err.message
+      log(`Migration failed. Reason: ${message}`)
       throw err
     })
-    .finally(() => client.end())
+    .finally(() => {
+      clearTimeout(timeoutId)
+      client.end()
+    })
 }
 
 function logResult(log) {

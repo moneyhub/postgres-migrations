@@ -30,7 +30,7 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
   }
 
   const log = config.logger || (() => {})
-  const {migrationTimeout = 60000} = config
+  const {migrationTimeout = 10000} = config
   const numberMigrationsToLoad = config.numberMigrationsToLoad
 
   const client = new pg.Client(dbConfig)

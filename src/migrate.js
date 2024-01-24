@@ -7,6 +7,7 @@ const SQL = require("sql-template-strings")
 const dedent = require("dedent-js")
 
 const runMigration = require("./run-migration")
+const {createLockTableIfExists, generateMigrationHash, verifyLockDoesNotExist, removeLock, insertLock} = require("./lock")
 
 module.exports = migrate
 
@@ -34,7 +35,7 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
   const numberMigrationsToLoad = config.numberMigrationsToLoad
 
   const client = new pg.Client(dbConfig)
-  let pid, queryCancelled = false, timeoutId
+  let hash, pid, queryCancelled = false, timeoutId
   log("Attempting database migration")
 
   return bluebird.resolve()
@@ -45,8 +46,14 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
       log(`Retrieved backend PID: ${res}`)
       pid = res
     })
+    .then(() => createLockTableIfExists(client))
     .then(() => loadMigrationFiles(migrationsDirectory, log, numberMigrationsToLoad))
     .then(filterMigrations(client))
+    .tap(migrations => {
+      hash = generateMigrationHash(migrations)
+    })
+    .tap(() => verifyLockDoesNotExist(client, hash))
+    .tap(() => insertLock(client, hash))
     .then((migrations) => {
       timeoutId = setTimeout(async () => {
         queryCancelled = true
@@ -63,6 +70,11 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
     })
     .each(runMigration(client))
     .then(logResult(log))
+    .tap(async () => {
+      if (hash) {
+        await removeLock(client, hash)
+      }
+    })
     .catch((err) => {
       const message = queryCancelled ? "Timeout" : err.message
       log(`Migration failed. Reason: ${message}`)

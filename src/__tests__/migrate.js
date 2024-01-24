@@ -1,4 +1,5 @@
 const test = require("ava")
+const fs = require("fs")
 const bluebird = require("bluebird")
 const {execSync} = require("child_process")
 const pg = require("pg")
@@ -8,6 +9,8 @@ const startPostgres = require("./_start-postgres")
 
 const createDb = require("../create")
 const migrate = require("../migrate")
+const {createLockTableIfExists, insertLock} = require("../lock")
+const crypto = require("crypto")
 
 const CONTAINER_NAME = "pg-migrations-test-migrate"
 const PASSWORD = startPostgres.PASSWORD
@@ -412,9 +415,46 @@ test("timeout failure", t => {
     })
 })
 
+test("locking failure", t => {
+  const databaseName = "migration-test-lock"
+  const dbConfig = {
+    database: databaseName,
+    user: "postgres",
+    password: PASSWORD,
+    host: "localhost",
+    port,
+  }
+
+  const hash = crypto.createHash("sha1")
+  const initMigration = fs.readFileSync("src/migrations/0_create-migrations-table.sql", "utf-8")
+  const migration = fs.readFileSync("src/__tests__/lock/1_first.sql", "utf-8")
+  hash.update(initMigration)
+  hash.update(migration)
+
+  const promise = createDb(databaseName, dbConfig)
+    .then(() => insertMigrationLock(dbConfig, hash.digest("hex")))
+    .then(() => migrate(dbConfig, "src/__tests__/lock"))
+
+  return t.throwsAsync(() => promise)
+    .then((err) => {
+      t.regex(err.message, /Current migration is locked:/)
+    })
+})
+
 test.after.always(() => {
   execSync(`docker rm -f ${CONTAINER_NAME}`)
 })
+
+async function insertMigrationLock(dbConfig, hash) {
+  const client = new pg.Client(dbConfig)
+  try {
+    await client.connect()
+    await createLockTableIfExists(client)
+    await insertLock(client, hash)
+  } finally {
+    client.end()
+  }
+}
 
 function doesTableExist(dbConfig, tableName) {
   const client = bluebird.promisifyAll(new pg.Client(dbConfig))

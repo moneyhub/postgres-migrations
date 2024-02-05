@@ -445,15 +445,12 @@ test.after.always(() => {
   execSync(`docker rm -f ${CONTAINER_NAME}`)
 })
 
-async function insertMigrationLock(dbConfig, hash) {
-  const client = new pg.Client(dbConfig)
-  try {
-    await client.connect()
-    await createLockTableIfExists(client)
-    await insertLock(client, hash)
-  } finally {
-    client.end()
-  }
+function insertMigrationLock(dbConfig, hash) {
+  const client = bluebird.promisifyAll(new pg.Client(dbConfig))
+  return client.connect()
+    .then(() => createLockTableIfExists(client))
+    .then(() => insertLock(client, hash))
+    .finally(() => client.end())
 }
 
 function doesTableExist(dbConfig, tableName) {

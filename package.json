@@ -1,6 +1,6 @@
 {
   "name": "@mft/postgres-migrations",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Stack Overflow style database migrations for PostgreSQL",
   "main": "src/index.js",
   "types": "src/index.d.ts",

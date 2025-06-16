@@ -3,7 +3,6 @@ const fs = require("fs")
 const crypto = require("crypto")
 const bluebird = require("bluebird")
 const path = require("path")
-const SQL = require("sql-template-strings")
 const dedent = require("dedent-js")
 
 const runMigration = require("./run-migration")
@@ -33,6 +32,7 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
   const log = config.logger || (() => {})
   const {migrationTimeout = 60000} = config
   const numberMigrationsToLoad = config.numberMigrationsToLoad
+  const schema = config.schema || "public"
 
   const client = new pg.Client(dbConfig)
   let hash, pid, queryCancelled = false, timeoutId
@@ -41,6 +41,8 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
   return bluebird.resolve()
     .then(() => client.connect())
     .then(() => log("Connected to database"))
+    .then(() => client.query(`SET app.schema = '${schema}'`))
+    .then(() => log(`Using schema: ${schema}`))
     .then(() => getPid(client))
     .then(res => {
       log(`Retrieved backend PID: ${res}`)
@@ -203,16 +205,24 @@ function loadFile(filePath) {
 }
 
 // Check whether table exists in postgres - http://stackoverflow.com/a/24089729
-function doesTableExist(client, tableName) {
-  return client.query(SQL`
-      SELECT EXISTS (
+async function doesTableExist(client, tableName) {
+  const schema = client.connectionParameters.schema || "public"
+  const result = await client.query(`
+    DO $$
+    DECLARE
+      schema_name text := '${schema}';
+      table_exists boolean;
+    BEGIN
+      EXECUTE 'SELECT EXISTS (
         SELECT 1
         FROM   pg_catalog.pg_class c
-        WHERE  c.relname = ${tableName}
-        AND    c.relkind = 'r'
-      );
-    `)
-    .then((result) => {
-      return result.rows.length > 0 && result.rows[0].exists
-    })
+        JOIN   pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+        WHERE  c.relname = ' || quote_literal(${tableName}) || '
+        AND    c.relkind = ''r''
+        AND    n.nspname = ' || quote_literal(schema_name) || '
+      )'
+      INTO table_exists;
+    END $$;
+  `)
+  return result.rows[0].table_exists
 }

@@ -1,5 +1,4 @@
 const bluebird = require("bluebird")
-const SQL = require("sql-template-strings")
 const dedent = require("dedent-js")
 
 module.exports = client => migration => {
@@ -23,12 +22,22 @@ module.exports = client => migration => {
     .then(begin)
     .then(() => client.query(migration.sql))
     .then(() => {
-      return client.query(
-        SQL`
-        INSERT INTO migrations (id, name, hash)
-          VALUES (${migration.id}, ${migration.name}, ${migration.hash})
-      `,
-      )
+      const plpgsql = `
+DO $$
+DECLARE
+  schema_name text := current_setting('app.schema', true);
+BEGIN
+  IF schema_name IS NULL THEN
+    schema_name := 'public';
+  END IF;
+  EXECUTE 'INSERT INTO ' || quote_ident(schema_name) || '.migrations (id, name, hash) VALUES (' 
+    || quote_literal(${migration.id}) || ', ' 
+    || quote_literal(${migration.name}) || ', ' 
+    || quote_literal(${migration.hash}) || ')'; -- TODO: Linter warning - extra semicolon inside PL/pgSQL block
+END
+$$
+  `
+      return client.query(plpgsql)
     })
     .then(end)
     .catch(err => {

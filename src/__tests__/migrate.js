@@ -460,8 +460,10 @@ function doesTableExist(dbConfig, tableName) {
         SELECT EXISTS (
           SELECT 1
           FROM   pg_catalog.pg_class c
+          JOIN   pg_catalog.pg_namespace n ON n.oid = c.relnamespace
           WHERE  c.relname = ${tableName}
           AND    c.relkind = 'r'
+          AND    n.nspname = current_setting('app.schema')
         );
       `),
     )

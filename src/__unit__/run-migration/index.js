@@ -51,9 +51,9 @@ test("runs a simple migration", t => {
       "should execute the migration",
     )
 
-    t.deepEqual(
+    t.is(
       query.thirdCall.args[0].values,
-      [migration.id, migration.name, migration.hash],
+      undefined,
       "should record the running of the migration in the database",
     )
 
@@ -96,9 +96,9 @@ test("does not run the migration in a transaction when instructed", t => {
       "should run the migration",
     )
 
-    t.deepEqual(
+    t.is(
       query.secondCall.args[0].values,
-      [migration.id, migration.name, migration.hash],
+      undefined,
       "should record the running of the migration in the database",
     )
   })

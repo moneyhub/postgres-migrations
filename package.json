@@ -37,6 +37,7 @@
   "dependencies": {
     "bluebird": "^3.7.2",
     "dedent-js": "^1.0.1",
+    "pg": "^8.11.3",
     "sql-template-strings": "^2.2.2"
   },
   "devDependencies": {
@@ -45,7 +46,6 @@
     "eslint": "^8.50.0",
     "eslint-plugin-ava": "^14.0.0",
     "husky": "^8.0.3",
-    "pg": "^8.11.3",
     "sinon": "^16.0.0"
   }
 }

@@ -25,7 +25,11 @@ createDb("database-name", {
     password: "password",
     host: "localhost",
     port: 5432,
-  }, "path/to/migration/files")
+  },
+  "path/to/migration/files",
+  {
+    schema: "mycustomschema", // optional, default: "public"
+  })
 })
 .then(() => {/* ... */})
 .catch((err) => {

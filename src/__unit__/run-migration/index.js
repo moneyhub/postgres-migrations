@@ -1,5 +1,6 @@
 const test = require("ava")
 const sinon = require("sinon")
+const dedent = require("dedent-js")
 
 const bluebird = require("bluebird")
 
@@ -21,6 +22,14 @@ test.before(() => {
     }),
   ])
 })
+
+function normalizeLines(str) {
+  return dedent(str)
+    .split("\n")
+    .map(line => line.trim())
+    .join("\n")
+    .trim()
+}
 
 function buildMigration(sql) {
   return {
@@ -51,10 +60,28 @@ test("runs a simple migration", t => {
       "should execute the migration",
     )
 
-    t.deepEqual(
-      query.thirdCall.args[0].values,
-      [migration.id, migration.name, migration.hash],
-      "should record the running of the migration in the database",
+    const thirdCallExpected = dedent`
+      DO $$
+      DECLARE
+        schema_name text := current_setting('app.schema', true);
+      BEGIN
+        IF schema_name IS NULL THEN
+          schema_name := 'public';
+        END IF;
+        EXECUTE format('INSERT INTO %I.migrations (id, name, hash) VALUES (%L, %L, %L)',
+          schema_name,
+          'id',
+          'name',
+          'hash'
+        );
+      END
+      $$
+    `
+
+    t.is(
+      normalizeLines(query.thirdCall.args[0]),
+      normalizeLines(thirdCallExpected),
+      "should record the running of the migration in the database (SQL text)",
     )
 
     t.is(
@@ -96,10 +123,28 @@ test("does not run the migration in a transaction when instructed", t => {
       "should run the migration",
     )
 
-    t.deepEqual(
-      query.secondCall.args[0].values,
-      [migration.id, migration.name, migration.hash],
-      "should record the running of the migration in the database",
+    const secondCallExpected = dedent`
+      DO $$
+      DECLARE
+        schema_name text := current_setting('app.schema', true);
+      BEGIN
+        IF schema_name IS NULL THEN
+          schema_name := 'public';
+        END IF;
+        EXECUTE format('INSERT INTO %I.migrations (id, name, hash) VALUES (%L, %L, %L)',
+          schema_name,
+          'id',
+          'name',
+          'hash'
+        );
+      END
+      $$
+    `
+
+    t.is(
+      normalizeLines(query.secondCall.args[0]),
+      normalizeLines(secondCallExpected),
+      "should record the running of the migration in the database (SQL text)",
     )
   })
 })

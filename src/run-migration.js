@@ -1,5 +1,4 @@
 const bluebird = require("bluebird")
-const SQL = require("sql-template-strings")
 const dedent = require("dedent-js")
 
 module.exports = client => migration => {
@@ -23,12 +22,24 @@ module.exports = client => migration => {
     .then(begin)
     .then(() => client.query(migration.sql))
     .then(() => {
-      return client.query(
-        SQL`
-        INSERT INTO migrations (id, name, hash)
-          VALUES (${migration.id}, ${migration.name}, ${migration.hash})
-      `,
-      )
+      const plpgsql = `
+DO $$
+DECLARE
+  schema_name text := current_setting('app.schema', true);
+BEGIN
+  IF schema_name IS NULL THEN
+    schema_name := 'public';
+  END IF;
+  EXECUTE format('INSERT INTO %I.migrations (id, name, hash) VALUES (%L, %L, %L)',
+    schema_name,
+    '${migration.id}',
+    '${migration.name}',
+    '${migration.hash}'
+  );
+END
+$$
+  `
+      return client.query(plpgsql)
     })
     .then(end)
     .catch(err => {

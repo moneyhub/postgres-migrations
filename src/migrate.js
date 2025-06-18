@@ -7,7 +7,9 @@ const SQL = require("sql-template-strings")
 const dedent = require("dedent-js")
 
 const runMigration = require("./run-migration")
-const {createLockTableIfExists, generateMigrationHash, verifyLockDoesNotExist, removeLock, insertLock} = require("./lock")
+const {createLockTableIfNotExists, generateMigrationHash, verifyLockDoesNotExist, removeLock, insertLock} = require("./lock")
+const {createSchemaIfNotExists, setSchema} = require("./schema")
+const {quoteIdent} = require("./utils")
 
 module.exports = migrate
 
@@ -33,6 +35,7 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
   const log = config.logger || (() => {})
   const {migrationTimeout = 60000} = config
   const numberMigrationsToLoad = config.numberMigrationsToLoad
+  const schema = config.schema || "public"
 
   const client = new pg.Client(dbConfig)
   let hash, pid, queryCancelled = false, timeoutId
@@ -41,19 +44,21 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
   return bluebird.resolve()
     .then(() => client.connect())
     .then(() => log("Connected to database"))
+    .then(() => createSchemaIfNotExists(client, schema))
+    .then(() => setSchema(client, log, schema))
     .then(() => getPid(client))
     .then(res => {
       log(`Retrieved backend PID: ${res}`)
       pid = res
     })
-    .then(() => createLockTableIfExists(client))
+    .then(() => createLockTableIfNotExists(client, schema))
     .then(() => loadMigrationFiles(migrationsDirectory, log, numberMigrationsToLoad))
-    .then(filterMigrations(client))
+    .then(filterMigrations(client, schema))
     .tap(migrations => {
       hash = generateMigrationHash(migrations)
     })
-    .tap(() => verifyLockDoesNotExist(client, hash))
-    .tap(() => insertLock(client, hash))
+    .tap(() => verifyLockDoesNotExist(client, hash, schema))
+    .tap(() => insertLock(client, hash, schema))
     .then((migrations) => {
       timeoutId = setTimeout(async () => {
         queryCancelled = true
@@ -72,7 +77,7 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
     .then(logResult(log))
     .tap(async () => {
       if (hash) {
-        await removeLock(client, hash)
+        await removeLock(client, hash, schema)
       }
     })
     .catch((err) => {
@@ -100,7 +105,7 @@ function logResult(log) {
 }
 
 // Work out which migrations to apply
-function filterMigrations(client) {
+function filterMigrations(client, schema = "public") {
   return (migrations) => {
     // Arrange in ID order
     const orderedMigrations = migrations.sort((a, b) => a.id - b.id)
@@ -112,7 +117,7 @@ function filterMigrations(client) {
       }
     })
 
-    return doesTableExist(client, "migrations")
+    return doesTableExist(client, "migrations", schema)
       .then((exists) => {
         if (!exists) {
           // Migrations table hasn't been created,
@@ -120,7 +125,7 @@ function filterMigrations(client) {
           return orderedMigrations
         }
 
-        return client.query("SELECT * FROM migrations ORDER BY id ASC")
+        return client.query(`SELECT * FROM ${quoteIdent(schema)}.migrations ORDER BY id ASC`)
           .then(filterUnappliedMigrations(orderedMigrations))
       })
   }
@@ -203,13 +208,15 @@ function loadFile(filePath) {
 }
 
 // Check whether table exists in postgres - http://stackoverflow.com/a/24089729
-function doesTableExist(client, tableName) {
+function doesTableExist(client, tableName, schema = "public") {
   return client.query(SQL`
       SELECT EXISTS (
         SELECT 1
         FROM   pg_catalog.pg_class c
+        JOIN   pg_catalog.pg_namespace n ON n.oid = c.relnamespace
         WHERE  c.relname = ${tableName}
         AND    c.relkind = 'r'
+        AND    n.nspname = ${schema}
       );
     `)
     .then((result) => {

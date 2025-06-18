@@ -1,17 +1,15 @@
-const SQL = require("sql-template-strings")
 const crypto = require("crypto")
+const {quoteIdent} = require("./utils")
 
-const createLockTableIfExists = client => {
+const createLockTableIfNotExists = (client, schema = "public") => {
   return client.query(
-    SQL`
-CREATE TABLE IF NOT EXISTS migration_locks (
-  hash varchar(40) NOT NULL PRIMARY KEY
-);
-`,
+    `CREATE TABLE IF NOT EXISTS ${quoteIdent(schema)}.migration_locks (
+      hash varchar(40) NOT NULL PRIMARY KEY
+    );`,
   )
 }
 
-const generateMigrationHash = migrations => {
+const generateMigrationHash = (migrations) => {
   const hash = crypto.createHash("sha1")
   migrations.forEach(migration => {
     hash.update(migration.sql)
@@ -20,12 +18,10 @@ const generateMigrationHash = migrations => {
   return hash.digest("hex")
 }
 
-const verifyLockDoesNotExist = async (client, hash) => {
+const verifyLockDoesNotExist = async (client, hash, schema = "public") => {
   const result = await client.query(
-    SQL`
-SELECT hash FROM migration_locks
-  WHERE hash = ${hash}
-    `,
+    `SELECT hash FROM ${quoteIdent(schema)}.migration_locks WHERE hash = $1`,
+    [hash],
   )
 
   if (result.rowCount) {
@@ -33,20 +29,22 @@ SELECT hash FROM migration_locks
   }
 }
 
-const removeLock = (client, hash) => {
+const removeLock = (client, hash, schema = "public") => {
   return client.query(
-    SQL`DELETE FROM migration_locks WHERE hash = ${hash};`,
+    `DELETE FROM ${quoteIdent(schema)}.migration_locks WHERE hash = $1`,
+    [hash],
   )
 }
 
-const insertLock = (client, hash) => {
+const insertLock = (client, hash, schema = "public") => {
   return client.query(
-    SQL`INSERT INTO migration_locks (hash) VALUES (${hash})`,
+    `INSERT INTO ${quoteIdent(schema)}.migration_locks (hash) VALUES ($1)`,
+    [hash],
   )
 }
 
 module.exports = {
-  createLockTableIfExists,
+  createLockTableIfNotExists,
   generateMigrationHash,
   verifyLockDoesNotExist,
   removeLock,

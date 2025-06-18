@@ -9,7 +9,7 @@ const startPostgres = require("./_start-postgres")
 
 const createDb = require("../create")
 const migrate = require("../migrate")
-const {createLockTableIfExists, insertLock} = require("../lock")
+const {createLockTableIfNotExists, insertLock} = require("../lock")
 const crypto = require("crypto")
 
 const CONTAINER_NAME = "pg-migrations-test-migrate"
@@ -448,11 +448,12 @@ test.after.always(() => {
 function insertMigrationLock(dbConfig, hash) {
   const client = bluebird.promisifyAll(new pg.Client(dbConfig))
   return client.connect()
-    .then(() => createLockTableIfExists(client))
+    .then(() => createLockTableIfNotExists(client))
     .then(() => insertLock(client, hash))
     .finally(() => client.end())
 }
 
+// Different to the doesTableExist in migrate.js
 function doesTableExist(dbConfig, tableName) {
   const client = bluebird.promisifyAll(new pg.Client(dbConfig))
   return client.connect()

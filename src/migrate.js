@@ -18,6 +18,28 @@ const getPid = async (client) => {
   return res.rows[0].pg_backend_pid
 }
 
+const acquireApplicationLock = async (client, lockId, shouldBlock = false, log) => {
+  if (shouldBlock) {
+    await client.query("SELECT pg_advisory_lock($1)", [lockId])
+  } else {
+    const result = await client.query("SELECT pg_try_advisory_lock($1)", [lockId])
+    if (!result.rows[0].pg_try_advisory_lock) {
+      throw new Error(`Failed to acquire application lock with ID: ${lockId}`)
+    }
+  }
+  log(`Acquired application lock with ID: ${lockId}`)
+}
+
+const releaseApplicationLock = async (client, lockId, log) => {
+  try {
+    await client.query("SELECT pg_advisory_unlock($1)", [lockId])
+    log(`Released application lock with ID: ${lockId}`)
+  } catch (error) {
+    log(`Failed to release (may not exist) application lock with ID: ${lockId}`)
+  }
+}
+
+// eslint-disable-next-line max-statements
 function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-disable-line complexity
   if (
     typeof dbConfig.database !== "string" ||
@@ -36,14 +58,18 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
   const {migrationTimeout = 60000} = config
   const numberMigrationsToLoad = config.numberMigrationsToLoad
   const schema = config.schema || "public"
+  const shouldBlockOnAppLock = config.shouldBlockOnAppLock || false
+  const applicationId = config.applicationId ?? Math.floor(Math.random() * 2147483647)
 
   const client = new pg.Client(dbConfig)
+
   let hash, pid, queryCancelled = false, timeoutId
   log("Attempting database migration")
 
   return bluebird.resolve()
     .then(() => client.connect())
     .then(() => log("Connected to database"))
+    .then(() => acquireApplicationLock(client, applicationId, shouldBlockOnAppLock, log))
     .then(() => createSchemaIfNotExists(client, schema))
     .then(() => setSchema(client, log, schema))
     .then(() => getPid(client))
@@ -85,8 +111,9 @@ function migrate(dbConfig = {}, migrationsDirectory, config = {}) { // eslint-di
       log(`Migration failed. Reason: ${message}`)
       throw err
     })
-    .finally(() => {
+    .finally(async () => {
       clearTimeout(timeoutId)
+      await releaseApplicationLock(client, applicationId, log)
       client.end()
     })
 }
